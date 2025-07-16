@@ -1,12 +1,26 @@
 {
     "name": "brstack-selenium-suite-new",
     "version": "1.0.0",
-    "description": "A new clean Bstackdemo Selenium test suite",
-    "main": "index.js",
+  "main": "browserstack.config.js",
+  "directories": {
+    "test": "tests"
+  },
     "scripts": {
       "test": "jest"
     },
-    "keywords": [],
-    "author": "",
-    "license": "ISC"
+    "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LGenSOC/bstack-selenium-suite.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "chai": "^5.2.0",
+    "dotenv": "^17.0.1",
+    "jest": "^30.0.4",
+    "@jest/globals": "^30.0.4",
+    "selenium-webdriver": "^4.34.0"
   }
+}
