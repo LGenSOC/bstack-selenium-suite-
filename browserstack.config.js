@@ -9,6 +9,19 @@ const commonCapabilities = {
   "browserstack.networkLogs": true,
 };
 
+// --- ADDING NEW DIAGNOSTIC LINES HERE ---
+//  Updated variable names in console.log for diagnostics
+console.log("BrowserStack Config:");
+console.log(
+  "Username set:",
+  process.env.BROWSERSTACK_USERNAME ? "*****" : "Not found"
+);
+console.log(
+  "Access key set:",
+  process.env.BROWSERSTACK_ACCESS_KEY ? "*****" : "Not found"
+);
+// --- ENDING NEW DIAGNOSTIC LINES ---
+
 const capabilities = [];
 // Configuration for Windows 10 Chrome
 capabilities.push({
