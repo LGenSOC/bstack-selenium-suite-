@@ -9,7 +9,7 @@ pipeline {
             steps {
                 // I download my project code from GitHub.
                 // IMPORTANT: This MUST match your GitHub's default branch.
-                git url: 'https://github.com/LGenSOC/brstack-selenium-suite.git',
+                git url: 'https://github.com/LGenSOC/bstack-selenium-suite.git',
                     branch: 'master' // <--- Ensure this is 'master' or 'main' as per your GitHub repo
             }
         }
