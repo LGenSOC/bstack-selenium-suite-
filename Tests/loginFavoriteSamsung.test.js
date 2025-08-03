@@ -90,179 +90,229 @@ describe("Bstackdemo Shopping Journey: Login, Favorite, and Verify", () => {
   // --- Our Main Test Scenario ---
   // This describes one specific journey we want to test.
   test("User can log in, favorite a Samsung phone, and find it in favorites", async () => {
-    // --- Step 1: Log in to the website ---
-    console.log("Starting login process...");
-
-    // Function to click a dropdown and select an option
-    // This simplifies repetitive dropdown interactions.
-    const selectDropdownOption = async (dropdownId, optionText) => {
-      // Find and click the main dropdown (e.g., username or password field)
-      const dropdownWrapper = await driver.wait(
-        until.elementLocated(By.id(dropdownId)),
-        15000,
-        `Dropdown with ID '${dropdownId}' not found.`
+    try {
+      // --- BROWSERSTACK EXECUTOR: Set Session Name ---
+      // This command tells BrowserStack what to name the session in the dashboard.
+      const sessionNameExecutor = {
+        action: "setSessionName",
+        arguments: {
+          name: "Bstackdemo Login and Favorite Test",
+        },
+      };
+      await driver.executeScript(
+        "browserstack_executor: " + JSON.stringify(sessionNameExecutor),
+        []
       );
-      await dropdownWrapper.click();
-      console.log(`Clicked dropdown: ${dropdownId}`);
 
-      // Wait for the specific option to appear and then click it
-      const optionElement = await driver.wait(
+      // --- Step 1: Log in to the website ---
+      console.log("Starting login process...");
+
+      // Function to click a dropdown and select an option
+      // This simplifies repetitive dropdown interactions.
+      const selectDropdownOption = async (dropdownId, optionText) => {
+        // Find and click the main dropdown (e.g., username or password field)
+        const dropdownWrapper = await driver.wait(
+          until.elementLocated(By.id(dropdownId)),
+          15000,
+          `Dropdown with ID '${dropdownId}' not found.`
+        );
+        await dropdownWrapper.click();
+        console.log(`Clicked dropdown: ${dropdownId}`);
+
+        // Wait for the specific option to appear and then click it
+        const optionElement = await driver.wait(
+          until.elementLocated(
+            By.xpath(
+              `//div[contains(@id, 'react-select') and text()='${optionText}']`
+            )
+          ),
+          10000,
+          `Option '${optionText}' not found in dropdown.`
+        );
+        await driver.wait(
+          until.elementIsVisible(optionElement),
+          5000,
+          `Option '${optionText}' found but not visible.`
+        );
+        await optionElement.click();
+        console.log(`Selected option: ${optionText}`);
+        await driver.sleep(1500); // Small pause for UI to update after selection
+      };
+
+      // Select 'demouser' for username
+      await selectDropdownOption("username", "demouser");
+
+      // Select 'testingisfun99' for password
+      await selectDropdownOption("password", "testingisfun99");
+
+      // --- Click the Login button ---
+      const loginButton = await driver.wait(
+        until.elementLocated(By.id("login-btn")),
+        10000,
+        "Login button not found."
+      );
+      await driver.wait(
+        until.elementIsVisible(loginButton),
+        5000,
+        "Login button not visible."
+      );
+      await driver.wait(
+        until.elementIsEnabled(loginButton),
+        5000,
+        "Login button not enabled."
+      );
+      await loginButton.click();
+      console.log("Clicked login button.");
+
+      // Wait for the login to complete and the dashboard to load.
+      // We're looking for the 'demouser' text, which confirms successful login.
+      try {
+        const usernameOnDashboard = await driver.wait(
+          until.elementLocated(
+            By.xpath("//span[contains(text(), 'demouser')]")
+          ),
+          30000, // Give it plenty of time (30 seconds) to log in
+          "User ('demouser') text not found on dashboard after login. Login likely failed."
+        );
+        expect(await usernameOnDashboard.getText()).toContain("demouser");
+        console.log("Login successful! User 'demouser' is displayed.");
+      } catch (error) {
+        // If the user text isn't found, try to find an error message.
+        try {
+          const errorMessage = await driver.findElement(
+            By.css('.api-error, .error-message, [role="alert"]')
+          );
+          const errorText = await errorMessage.getText();
+          if (errorText.length > 0) {
+            throw new Error(`Login failed with error: "${errorText}"`);
+          }
+        } catch (e) {
+          // If no specific error message element is found, it's still a login failure.
+          throw new Error(
+            `Login failed and no clear error message found. Original issue: ${error.message}`
+          );
+        }
+      }
+      // Small pause after login confirmation
+      await driver.sleep(2000);
+
+      // --- Step 2: Filter products to show only "Samsung" devices ---
+      console.log("Applying 'Samsung' filter...");
+      const samsungFilterCheckbox = await driver.wait(
         until.elementLocated(
           By.xpath(
-            `//div[contains(@id, 'react-select') and text()='${optionText}']`
+            "//label[./input[@value='Samsung']]/span[@class='checkmark']"
           )
         ),
         10000,
-        `Option '${optionText}' not found in dropdown.`
+        "'Samsung' filter checkbox not found."
       );
+      await samsungFilterCheckbox.click();
+      console.log("Clicked 'Samsung' filter.");
+
+      // Wait for the page to finish filtering (spinner disappears).
+      // This is important because products change after filtering.
       await driver.wait(
-        until.elementIsVisible(optionElement),
-        5000,
-        `Option '${optionText}' found but not visible.`
+        until.stalenessOf(driver.findElement(By.css(".spinner"))),
+        10000,
+        "Product loading spinner did not disappear after filtering."
       );
-      await optionElement.click();
-      console.log(`Selected option: ${optionText}`);
-      await driver.sleep(1500); // Small pause for UI to update after selection
-    };
+      console.log("Products filtered. Waiting for 'Galaxy S20+' to appear...");
 
-    // Select 'demouser' for username
-    await selectDropdownOption("username", "demouser");
-
-    // Select 'testingisfun99' for password
-    await selectDropdownOption("password", "testingisfun99");
-
-    // --- Click the Login button ---
-    const loginButton = await driver.wait(
-      until.elementLocated(By.id("login-btn")),
-      10000,
-      "Login button not found."
-    );
-    await driver.wait(
-      until.elementIsVisible(loginButton),
-      5000,
-      "Login button not visible."
-    );
-    await driver.wait(
-      until.elementIsEnabled(loginButton),
-      5000,
-      "Login button not enabled."
-    );
-    await loginButton.click();
-    console.log("Clicked login button.");
-
-    // Wait for the login to complete and the dashboard to load.
-    // We're looking for the 'demouser' text, which confirms successful login.
-    try {
-      const usernameOnDashboard = await driver.wait(
-        until.elementLocated(By.xpath("//span[contains(text(), 'demouser')]")),
-        30000, // Give it plenty of time (30 seconds) to log in
-        "User ('demouser') text not found on dashboard after login. Login likely failed."
+      // --- Step 3: Find and Favorite the "Galaxy S20+" phone ---
+      // We wait for the specific "Galaxy S20+" product name to appear after filtering.
+      const galaxyS20PlusProductName = await driver.wait(
+        until.elementLocated(By.xpath("//p[text()='Galaxy S20+']")),
+        15000, // Give it enough time to show up
+        "Galaxy S20+ product name not found after Samsung filter. Filter might not have worked or item is missing."
       );
-      expect(await usernameOnDashboard.getText()).toContain("demouser");
-      console.log("Login successful! User 'demouser' is displayed.");
+      console.log("Found 'Galaxy S20+' product.");
+
+      // Now, find the heart icon (favorite button) associated with this specific product.
+      const favoriteButton = await driver.wait(
+        until.elementLocated(
+          By.xpath(
+            "//div[contains(@class, 'shelf-item') and .//p[text()='Galaxy S20+']]//button[contains(@class, 'MuiIconButton-root') and .//*[local-name()='svg']]"
+          )
+        ),
+        10000,
+        "Favorite heart button not found for Galaxy S20+."
+      );
+      await favoriteButton.click();
+      console.log("Clicked to favorite 'Galaxy S20+'.");
+
+      // Wait for the favorite button to visually confirm it's been clicked.
+      await driver.wait(
+        until.elementLocated(
+          By.xpath(
+            "//div[contains(@class, 'shelf-item') and .//p[text()='Galaxy S20+']]//button[contains(@class, 'clicked')]"
+          )
+        ),
+        10000,
+        "Favorite button did not show 'clicked' state for Galaxy S20+."
+      );
+      console.log("Favorite action confirmed visually.");
+      await driver.sleep(1000); // Small pause for good measure
+
+      // --- Step 4: Go to the Favorites page and verify ---
+      console.log("Navigating to the 'Favourites' page...");
+      const favouritesLink = await driver.wait(
+        until.elementLocated(By.id("favourites")),
+        15000,
+        "Favourites link not found in the navigation bar."
+      );
+      await favouritesLink.click();
+      console.log("Clicked 'Favourites' link.");
+
+      // On the favorites page, we expect to see 'Galaxy S20+'.
+      const favoritedItemOnPage = await driver.wait(
+        until.elementLocated(By.xpath("//p[text()='Galaxy S20+']")),
+        20000, // Generous wait for favorites page to load
+        "Galaxy S20+ not found on Favorites page."
+      );
+      // We confirm its text contains what we expect.
+      expect(await favoritedItemOnPage.getText()).toContain("Galaxy S20+");
+      console.log("Successfully found 'Galaxy S20+' on the Favorites page.");
+
+      // Also, let's verify it's the ONLY item there (since we only favorited one).
+      const allItemsOnFavoritesPage = await driver.findElements(
+        By.css(".shelf-item")
+      );
+      expect(allItemsOnFavoritesPage.length).toBe(1);
+      console.log("Confirmed: 'Galaxy S20+' is the only item in favorites.");
+
+      // --- BROWSERSTACK EXECUTOR: Set Test Status to 'passed' ---
+      // This command tells BrowserStack the test was successful.
+      const statusPassedExecutor = {
+        action: "setSessionStatus",
+        arguments: {
+          status: "passed",
+          reason: "User was able to log in, favorite an item, and verify it.",
+        },
+      };
+      await driver.executeScript(
+        "browserstack_executor: " + JSON.stringify(statusPassedExecutor),
+        []
+      );
+
+      console.log("--- Test finished successfully! 🎉 ---");
     } catch (error) {
-      // If the user text isn't found, try to find an error message.
-      try {
-        const errorMessage = await driver.findElement(
-          By.css('.api-error, .error-message, [role="alert"]')
-        );
-        const errorText = await errorMessage.getText();
-        if (errorText.length > 0) {
-          throw new Error(`Login failed with error: "${errorText}"`);
-        }
-      } catch (e) {
-        // If no specific error message element is found, it's still a login failure.
-        throw new Error(
-          `Login failed and no clear error message found. Original issue: ${error.message}`
-        );
-      }
+      // --- BROWSERSTACK EXECUTOR: Set Test Status to 'failed' ---
+      // This command tells BrowserStack the test failed and provides the reason.
+      console.error("Test failed:", error);
+      const statusFailedExecutor = {
+        action: "setSessionStatus",
+        arguments: {
+          status: "failed",
+          reason: error.message,
+        },
+      };
+      await driver.executeScript(
+        "browserstack_executor: " + JSON.stringify(statusFailedExecutor),
+        []
+      );
+
+      throw error; // Re-throw the error to ensure Jest knows the test failed.
     }
-    // Small pause after login confirmation
-    await driver.sleep(2000);
-
-    // --- Step 2: Filter products to show only "Samsung" devices ---
-    console.log("Applying 'Samsung' filter...");
-    const samsungFilterCheckbox = await driver.wait(
-      until.elementLocated(
-        By.xpath("//label[./input[@value='Samsung']]/span[@class='checkmark']")
-      ),
-      10000,
-      "'Samsung' filter checkbox not found."
-    );
-    await samsungFilterCheckbox.click();
-    console.log("Clicked 'Samsung' filter.");
-
-    // Wait for the page to finish filtering (spinner disappears).
-    // This is important because products change after filtering.
-    await driver.wait(
-      until.stalenessOf(driver.findElement(By.css(".spinner"))),
-      10000,
-      "Product loading spinner did not disappear after filtering."
-    );
-    console.log("Products filtered. Waiting for 'Galaxy S20+' to appear...");
-
-    // --- Step 3: Find and Favorite the "Galaxy S20+" phone ---
-    // We wait for the specific "Galaxy S20+" product name to appear after filtering.
-    const galaxyS20PlusProductName = await driver.wait(
-      until.elementLocated(By.xpath("//p[text()='Galaxy S20+']")),
-      15000, // Give it enough time to show up
-      "Galaxy S20+ product name not found after Samsung filter. Filter might not have worked or item is missing."
-    );
-    console.log("Found 'Galaxy S20+' product.");
-
-    // Now, find the heart icon (favorite button) associated with this specific product.
-    const favoriteButton = await driver.wait(
-      until.elementLocated(
-        By.xpath(
-          "//div[contains(@class, 'shelf-item') and .//p[text()='Galaxy S20+']]//button[contains(@class, 'MuiIconButton-root') and .//*[local-name()='svg']]"
-        )
-      ),
-      10000,
-      "Favorite heart button not found for Galaxy S20+."
-    );
-    await favoriteButton.click();
-    console.log("Clicked to favorite 'Galaxy S20+'.");
-
-    // Wait for the favorite button to visually confirm it's been clicked.
-    await driver.wait(
-      until.elementLocated(
-        By.xpath(
-          "//div[contains(@class, 'shelf-item') and .//p[text()='Galaxy S20+']]//button[contains(@class, 'clicked')]"
-        )
-      ),
-      10000,
-      "Favorite button did not show 'clicked' state for Galaxy S20+."
-    );
-    console.log("Favorite action confirmed visually.");
-    await driver.sleep(1000); // Small pause for good measure
-
-    // --- Step 4: Go to the Favorites page and verify ---
-    console.log("Navigating to the 'Favourites' page...");
-    const favouritesLink = await driver.wait(
-      until.elementLocated(By.id("favourites")),
-      15000,
-      "Favourites link not found in the navigation bar."
-    );
-    await favouritesLink.click();
-    console.log("Clicked 'Favourites' link.");
-
-    // On the favorites page, we expect to see 'Galaxy S20+'.
-    const favoritedItemOnPage = await driver.wait(
-      until.elementLocated(By.xpath("//p[text()='Galaxy S20+']")),
-      20000, // Generous wait for favorites page to load
-      "Galaxy S20+ not found on Favorites page."
-    );
-    // We confirm its text contains what we expect.
-    expect(await favoritedItemOnPage.getText()).toContain("Galaxy S20+");
-    console.log("Successfully found 'Galaxy S20+' on the Favorites page.");
-
-    // Also, let's verify it's the ONLY item there (since we only favorited one).
-    const allItemsOnFavoritesPage = await driver.findElements(
-      By.css(".shelf-item")
-    );
-    expect(allItemsOnFavoritesPage.length).toBe(1);
-    console.log("Confirmed: 'Galaxy S20+' is the only item in favorites.");
-
-    console.log("--- Test finished successfully! 🎉 ---");
   }, 120000); // Overall test timeout (2 minutes) to cover all waits.
 });
