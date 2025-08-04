@@ -141,8 +141,7 @@ capabilities.forEach((config) => {
         await loginButton.click();
         console.log("Clicked login button.");
 
-        // --- FIX: Replaced username wait with a more reliable check for the Favourites link.
-        // This is more stable on Android and other devices.
+        // --- FIX: This section has been updated to be more robust. ---
         try {
           // Wait for the URL to change to the products page
           await driver.wait(
@@ -150,12 +149,22 @@ capabilities.forEach((config) => {
             30000,
             "URL did not change after login."
           );
-          // Wait for a key dashboard element to be visible
+
+          // First, locate the element. This ensures the 'favourites' link is in the DOM.
           const favouritesLink = await driver.wait(
-            until.elementIsVisible(By.id("favourites")),
+            until.elementLocated(By.id("favourites")),
             15000,
-            "Favourites link not visible after login. Login likely failed."
+            "Favourites link not located after login."
           );
+
+          // Second, wait for that specific element to be visible.
+          await driver.wait(
+            until.elementIsVisible(favouritesLink),
+            15000,
+            "Favourites link found but not visible after login. Login likely failed."
+          );
+
+          // Now we can safely call isDisplayed() on a confirmed web element.
           expect(await favouritesLink.isDisplayed()).toBe(true);
           console.log("Login successful! The 'Favourites' link is displayed.");
         } catch (error) {
