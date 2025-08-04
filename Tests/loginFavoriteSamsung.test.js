@@ -152,9 +152,7 @@ capabilities.forEach((config) => {
           );
           // Wait for a key dashboard element to be visible
           const favouritesLink = await driver.wait(
-            until.elementIsVisible(
-              await driver.findElement(By.id("favourites"))
-            ),
+            until.elementIsVisible(By.id("favourites")),
             15000,
             "Favourites link not visible after login. Login likely failed."
           );
