@@ -228,6 +228,8 @@ capabilities.forEach((config) => {
         );
         await favouritesLink.click();
         console.log("Clicked 'Favourites' link.");
+
+        // This wait correctly handles the StaleElementReferenceError by finding the element again on the new page.
         const favoritedItemOnPage = await driver.wait(
           until.elementLocated(By.xpath("//p[text()='Galaxy S20+']")),
           20000,
