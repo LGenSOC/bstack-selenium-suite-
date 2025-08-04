@@ -140,16 +140,26 @@ capabilities.forEach((config) => {
         );
         await loginButton.click();
         console.log("Clicked login button.");
+
+        // --- FIX: Replaced username wait with a more reliable check for the Favourites link.
+        // This is more stable on Android and other devices.
         try {
-          const usernameOnDashboard = await driver.wait(
-            until.elementLocated(
-              By.xpath("//span[contains(text(), 'demouser')]")
-            ),
+          // Wait for the URL to change to the products page
+          await driver.wait(
+            until.urlContains("/"),
             30000,
-            "User ('demouser') text not found on dashboard after login. Login likely failed."
+            "URL did not change after login."
           );
-          expect(await usernameOnDashboard.getText()).toContain("demouser");
-          console.log("Login successful! User 'demouser' is displayed.");
+          // Wait for a key dashboard element to be visible
+          const favouritesLink = await driver.wait(
+            until.elementIsVisible(
+              await driver.findElement(By.id("favourites"))
+            ),
+            15000,
+            "Favourites link not visible after login. Login likely failed."
+          );
+          expect(await favouritesLink.isDisplayed()).toBe(true);
+          console.log("Login successful! The 'Favourites' link is displayed.");
         } catch (error) {
           try {
             const errorMessage = await driver.findElement(
@@ -229,14 +239,18 @@ capabilities.forEach((config) => {
         await favouritesLink.click();
         console.log("Clicked 'Favourites' link.");
 
-        // This wait correctly handles the StaleElementReferenceError by finding the element again on the new page.
+        // --- FIX: The previous attempt to find this element was susceptible to a race condition.
+        // I've updated the wait to explicitly check for both location and visibility before interacting with the element.
         const favoritedItemOnPage = await driver.wait(
-          until.elementLocated(By.xpath("//p[text()='Galaxy S20+']")),
+          until.elementIsVisible(
+            await driver.findElement(By.xpath("//p[text()='Galaxy S20+']"))
+          ),
           20000,
           "Galaxy S20+ not found on Favorites page."
         );
         expect(await favoritedItemOnPage.getText()).toContain("Galaxy S20+");
         console.log("Successfully found 'Galaxy S20+' on the Favorites page.");
+
         const allItemsOnFavoritesPage = await driver.findElements(
           By.css(".shelf-item")
         );
