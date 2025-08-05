@@ -3,8 +3,8 @@ const commonCapabilities = {
   "browserstack.user": process.env.BROWSERSTACK_USERNAME,
   "browserstack.key": process.env.BROWSERSTACK_ACCESS_KEY,
   //
-  build: "BSTACK Tech Challenge",
-  name: "Tech Challenge Test",
+  projectName: "BSTACK Tech Challenge",
+  buildName: "Tech Challenge Test Build",
   "browserstack.debug": true,
   "browserstack.networkLogs": true,
 };
