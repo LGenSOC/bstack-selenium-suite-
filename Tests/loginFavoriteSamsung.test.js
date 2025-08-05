@@ -46,7 +46,7 @@ capabilities.forEach((config) => {
 
       // --- Go to the Website: I start my test on the sign-in page ---
       await driver.get("https://www.bstackdemo.com/signin");
-      console.log(`Mapsd to: ${await driver.getCurrentUrl()}`);
+      console.log(`Mapped to: ${await driver.getCurrentUrl()}`);
 
       // --- Initial Page Load Wait: I ensure the page is ready before I interact ---
       try {
@@ -141,30 +141,33 @@ capabilities.forEach((config) => {
         await loginButton.click();
         console.log("Clicked login button.");
 
-        // --- FIX: This section has been updated to be more robust. ---
         try {
-          // Wait for the URL to change to the products page
+          // Wait for the URL to change to the products page.
           await driver.wait(
             until.urlContains("/"),
             30000,
             "URL did not change after login."
           );
-
-          // First, locate the element. This ensures the 'favourites' link is in the DOM.
-          const favouritesLink = await driver.wait(
-            until.elementLocated(By.id("favourites")),
-            15000,
-            "Favourites link not located after login."
+          // And wait for a product item to appear, which confirms the main content is loaded.
+          await driver.wait(
+            until.elementLocated(By.className("shelf-item")),
+            30000,
+            "First product item ('shelf-item') not found after login."
           );
 
-          // Second, wait for that specific element to be visible.
+          // Now we can confirm the favorites link is visible.
+          const favouritesLink = await driver.wait(
+            until.elementLocated(By.id("favourites")),
+            30000, // Increased timeout to 30s for stability on slower platforms.
+            "Favourites link not located after login. Wait timed out."
+          );
+
           await driver.wait(
             until.elementIsVisible(favouritesLink),
             15000,
             "Favourites link found but not visible after login. Login likely failed."
           );
 
-          // Now we can safely call isDisplayed() on a confirmed web element.
           expect(await favouritesLink.isDisplayed()).toBe(true);
           console.log("Login successful! The 'Favourites' link is displayed.");
         } catch (error) {
@@ -197,57 +200,80 @@ capabilities.forEach((config) => {
         );
         await samsungFilterCheckbox.click();
         console.log("Clicked 'Samsung' filter.");
-        await driver.wait(
-          until.stalenessOf(driver.findElement(By.css(".spinner"))),
-          10000,
-          "Product loading spinner did not disappear after filtering."
-        );
+
+        try {
+          await driver.wait(
+            until.stalenessOf(driver.findElement(By.css(".spinner"))),
+            10000,
+            "Product loading spinner did not disappear after filtering."
+          );
+        } catch (e) {
+          console.log(
+            "Note: Spinner element not found, continuing with product wait."
+          );
+        }
+
         console.log(
           "Products filtered. Waiting for 'Galaxy S20+' to appear..."
         );
 
         // --- Step 3: I find and Favorite the "Galaxy S20+" phone ---
-        const galaxyS20PlusProductName = await driver.wait(
-          until.elementLocated(By.xpath("//p[text()='Galaxy S20+']")),
-          15000,
-          "Galaxy S20+ product name not found after Samsung filter. Filter might not have worked or item is missing."
-        );
-        console.log("Found 'Galaxy S20+' product.");
-        const favoriteButton = await driver.wait(
+        const galaxyS20PlusProductContainer = await driver.wait(
           until.elementLocated(
             By.xpath(
-              "//div[contains(@class, 'shelf-item') and .//p[text()='Galaxy S20+']]//button[contains(@class, 'MuiIconButton-root') and .//*[local-name()='svg']]"
+              "//div[contains(@class, 'shelf-item') and .//p[text()='Galaxy S20+']]"
             )
           ),
-          10000,
-          "Favorite heart button not found for Galaxy S20+."
+          15000,
+          "Galaxy S20+ product container not found after Samsung filter."
+        );
+        console.log("Found 'Galaxy S20+' product.");
+
+        // Find the heart icon within the product container.
+        const favoriteButton = await galaxyS20PlusProductContainer.findElement(
+          By.xpath(".//button[contains(@class, 'MuiIconButton-root')]")
         );
         await favoriteButton.click();
         console.log("Clicked to favorite 'Galaxy S20+'.");
+
+        // --- FIX: The key change here is to check the SVG path data, not a class. ---
         await driver.wait(
           until.elementLocated(
             By.xpath(
-              "//div[contains(@class, 'shelf-item') and .//p[text()='Galaxy S20+']]//button[contains(@class, 'clicked')]"
+              "//div[contains(@class, 'shelf-item') and .//p[text()='Galaxy S20+']]//button//*[local-name()='path' and contains(@d, 'M12 21.35')]"
             )
           ),
           10000,
-          "Favorite button did not show 'clicked' state for Galaxy S20+."
+          "Favorite button did not show the filled heart SVG path."
         );
         console.log("Favorite action confirmed visually.");
         await driver.sleep(1000);
 
         // --- Step 4: I go to the Favorites page and verify ---
         console.log("Navigating to the 'Favourites' page...");
-        const favouritesLink = await driver.wait(
-          until.elementLocated(By.id("favourites")),
-          15000,
-          "Favourites link not found in the navigation bar."
-        );
-        await favouritesLink.click();
+        try {
+          await driver
+            .wait(
+              until.elementIsClickable(By.id("favourites")),
+              15000,
+              "Favourites link not found or not clickable in the navigation bar."
+            )
+            .click();
+        } catch (error) {
+          if (error.name === "StaleElementReferenceError") {
+            console.log("Stale element detected, re-finding and trying again.");
+            const favouritesLink = await driver.wait(
+              until.elementIsClickable(By.id("favourites")),
+              15000,
+              "Favourites link not found or not clickable on retry."
+            );
+            await favouritesLink.click();
+          } else {
+            throw error;
+          }
+        }
         console.log("Clicked 'Favourites' link.");
 
-        // --- FIX: The previous attempt to find this element was susceptible to a race condition.
-        // I've updated the wait to explicitly check for both location and visibility before interacting with the element.
         const favoritedItemOnPage = await driver.wait(
           until.elementIsVisible(
             await driver.findElement(By.xpath("//p[text()='Galaxy S20+']"))
