@@ -141,6 +141,9 @@ capabilities.forEach((config) => {
         await loginButton.click();
         console.log("Clicked login button.");
 
+        // Let's give the page a moment to load before checking for elements
+        await driver.sleep(2000);
+
         try {
           // Wait for the URL to change to the products page.
           await driver.wait(
@@ -252,18 +255,17 @@ capabilities.forEach((config) => {
         // --- Step 4: I go to the Favorites page and verify ---
         console.log("Navigating to the 'Favourites' page...");
         try {
-          await driver
-            .wait(
-              until.elementIsClickable(By.id("favourites")),
-              15000,
-              "Favourites link not found or not clickable in the navigation bar."
-            )
-            .click();
+          const favouritesLink = await driver.wait(
+            until.elementLocated(By.id("favourites")),
+            15000,
+            "Favourites link not found or not clickable in the navigation bar."
+          );
+          await favouritesLink.click();
         } catch (error) {
           if (error.name === "StaleElementReferenceError") {
             console.log("Stale element detected, re-finding and trying again.");
             const favouritesLink = await driver.wait(
-              until.elementIsClickable(By.id("favourites")),
+              until.elementLocated(By.id("favourites")),
               15000,
               "Favourites link not found or not clickable on retry."
             );
